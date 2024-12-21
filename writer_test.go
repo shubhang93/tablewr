@@ -2,6 +2,7 @@ package tablewr
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 )
 
@@ -37,4 +38,34 @@ func TestTableWriter_Write(t *testing.T) {
 			t.Errorf("want:\n%q \n got:\n%q", test.Expected, out.String())
 		}
 	}
+}
+
+func BenchmarkTableWriter_Write(b *testing.B) {
+	sizes := []int{
+		10,
+		100,
+		1000,
+		10000,
+		100000,
+	}
+	for _, size := range sizes {
+		b.Run(fmt.Sprintf("size:%d", size), func(b *testing.B) {
+			b.ReportAllocs()
+			rows := makeRowsWithHeader(size)
+			var buff bytes.Buffer
+			tr := New(&buff, 0, WithSep())
+			if err := tr.Write(rows); err != nil {
+				return
+			}
+		})
+	}
+}
+
+func makeRowsWithHeader(size int) [][]string {
+	rows := make([][]string, size+1)
+	for i := range rows {
+		rows[i] = []string{"data", "dataa", "dataaa", "dataaaa", "dataaaaaa"}
+	}
+	rows[0] = []string{"header", "headere", "headerrr", "headerrrrr", "headerrrrrrr"}
+	return rows
 }

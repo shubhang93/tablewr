@@ -37,5 +37,4 @@ func TestTableWriter_Write(t *testing.T) {
 			t.Errorf("want:\n%q \n got:\n%q", test.Expected, out.String())
 		}
 	}
-
 }

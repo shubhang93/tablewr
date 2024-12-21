@@ -1,7 +1,6 @@
 package tablewr
 
 import (
-	"fmt"
 	"io"
 	"strings"
 	"text/tabwriter"
@@ -9,7 +8,6 @@ import (
 
 type TableWriter struct {
 	wr             *tabwriter.Writer
-	sb             *strings.Builder
 	headerRowIndex int
 	tableWriterOpts
 }
@@ -57,7 +55,6 @@ func New(writer io.Writer, headerRowIndex int, opts ...func(opts *tableWriterOpt
 	tr := tabwriter.NewWriter(writer, 0, 0, 0, '\t', tropts.OptsFlags)
 	return &TableWriter{
 		wr:              tr,
-		sb:              &strings.Builder{},
 		headerRowIndex:  headerRowIndex,
 		tableWriterOpts: tropts,
 	}
@@ -84,52 +81,60 @@ func (twr *TableWriter) Write(rows [][]string) error {
 	if _, err := io.WriteString(twr.wr, strings.Repeat("\n", twr.TableTopPadding)); err != nil {
 		return err
 	}
+	leftPadding := strings.Repeat(" ", twr.ColLeftPadding)
+	bottomPadding := strings.Repeat("\n", twr.TableBottomPadding)
 
 	for i, row := range rows {
 		for j, col := range row {
 			mw := maxWidths[j]
 			numLeftOver := mw - len(col)
 			rightPadding := strings.Repeat(" ", numLeftOver+twr.ColRightPadding)
-			leftPadding := strings.Repeat(" ", twr.ColLeftPadding)
 
-			twr.sb.WriteString(leftPadding)
-			twr.sb.WriteString(col)
-			twr.sb.WriteString(rightPadding)
-			twr.sb.WriteByte('\t')
-
-			_, err := fmt.Fprint(twr.wr, twr.sb.String())
-			if err != nil {
+			if _, err := io.WriteString(twr.wr, leftPadding); err != nil {
 				return err
 			}
-			twr.sb.Reset()
+			if _, err := io.WriteString(twr.wr, col); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(twr.wr, rightPadding); err != nil {
+				return err
+			}
+			if _, err := io.WriteString(twr.wr, "\t"); err != nil {
+				return err
+			}
 		}
 
-		_, err := fmt.Fprint(twr.wr, "\n")
+		_, err := io.WriteString(twr.wr, "\n")
 		if err != nil {
 			return err
 		}
-
 		if i == twr.headerRowIndex {
 			if err := twr.writeRowDelim(maxWidths, twr.ColRightPadding+twr.ColRightPadding); err != nil {
 				return err
 			}
 		}
 	}
-	if _, err := io.WriteString(twr.wr, strings.Repeat("\n", twr.TableBottomPadding)); err != nil {
+
+	if _, err := io.WriteString(twr.wr, bottomPadding); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (twr *TableWriter) writeRowDelim(colWidths []int, padding int) error {
-	defer twr.sb.Reset()
 	for _, width := range colWidths {
-		twr.sb.WriteString(strings.Repeat("-", width))
-		twr.sb.WriteString(strings.Repeat("-", padding))
-		twr.sb.WriteByte('\t')
+		if _, err := io.WriteString(twr.wr, strings.Repeat("-", width)); err != nil {
+			return err
+		}
+		if _, err := io.WriteString(twr.wr, strings.Repeat("-", padding)); err != nil {
+			return err
+		}
+
+		if _, err := io.WriteString(twr.wr, "\t"); err != nil {
+			return err
+		}
 	}
-	twr.sb.WriteByte('\n')
-	if _, err := fmt.Fprint(twr.wr, twr.sb.String()); err != nil {
+	if _, err := io.WriteString(twr.wr, "\n"); err != nil {
 		return err
 	}
 	return nil

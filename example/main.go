@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	wr := tablewr.New(os.Stderr, 0, tablewr.WithSep())
+	wr := tablewr.New(os.Stdout, 0, tablewr.WithSep())
 	data := [][]string{
 		{"title", "price", "sold out", "rating"},
 		{"The Shining", "30$", "yes", "*****"},
